@@ -3,77 +3,49 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>猫キャッチゲーム 🐱🐟</title>
+  <title>猫キャッチゲーム — デバッグ済み</title>
   <style>
-    :root{
-      --bg:#f8fafc; --card:#ffffff; --accent:#ff6b6b; --muted:#6b7280;
-    }
-    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Hiragino Kaku Gothic ProN',Meiryo, sans-serif;background:linear-gradient(180deg,#e6f7ff 0%, #f8fafc 60%);}
+    :root{--bg:#f8fafc;--card:#fff;--accent:#ff6b6b;--muted:#6b7280}
+    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Hiragino Kaku Gothic ProN',Meiryo, sans-serif;background:linear-gradient(180deg,#e6f7ff 0,#f8fafc 60%);}
     .wrap{max-width:980px;margin:28px auto;padding:18px}
-    header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-    h1{font-size:20px;margin:0}
     .panel{background:var(--card);border-radius:14px;padding:12px;box-shadow:0 6px 20px rgba(27,40,60,0.06)}
-
     #game-area{position:relative;overflow:hidden;border-radius:12px;height:560px;background:linear-gradient(180deg,#dff6ff 0,#ccecff 60%);display:flex;flex-direction:column}
     #sky{flex:1;position:relative}
     #ground{height:84px;background:linear-gradient(180deg,#9ee6a0,#7cd07a);display:flex;align-items:center;justify-content:center}
-
-    /* HUD */
     .hud{display:flex;justify-content:space-between;align-items:center;padding:12px}
     .score{font-weight:700;font-size:18px}
     .lives{display:flex;gap:6px;align-items:center}
-    .heart{font-size:20px;filter:drop-shadow(0 1px 0 rgba(0,0,0,0.06))}
-
-    /* Cat */
+    .heart{font-size:20px}
     .cat{position:absolute;bottom:86px;left:50%;transform:translateX(-50%);font-size:44px;user-select:none;pointer-events:none}
-    .cat-shadow{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);width:100px;height:8px;border-radius:50%;background:rgba(0,0,0,0.08);filter:blur(6px);}
-
-    /* Fish */
+    .cat-shadow{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);width:100px;height:8px;border-radius:50%;background:rgba(0,0,0,0.08);filter:blur(6px)}
     .fish{position:absolute;font-size:34px;user-select:none}
-
-    /* Overlay screens */
     .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(255,255,255,0.6),rgba(255,255,255,0.4));backdrop-filter:blur(4px)}
     .menu{background:var(--card);padding:20px;border-radius:12px;text-align:center;box-shadow:0 10px 30px rgba(20,40,80,0.08)}
-    .menu h2{margin:0 0 8px 0}
     .btn{display:inline-block;padding:10px 16px;border-radius:10px;background:var(--accent);color:white;font-weight:700;border:none;cursor:pointer}
     .muted{color:var(--muted);font-size:14px}
-
-    /* responsive */
-    @media (max-width:600px){
-      #game-area{height:72vh}
-      .cat{font-size:36px}
-      .fish{font-size:28px}
-    }
+    @media (max-width:600px){#game-area{height:72vh}.cat{font-size:36px}.fish{font-size:28px}}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <header>
-      <h1>猫キャッチゲーム — 落ちてくる魚をキャッチしよう！</h1>
-    </header>
-
+    <header><h1>猫キャッチゲーム — デバッグ済み</h1></header>
     <div id="game-area" class="panel">
       <div id="sky">
         <div class="hud">
           <div class="score">Score: <span id="score">0</span></div>
           <div class="lives" aria-live="polite">Lives: <div id="hearts"></div></div>
         </div>
-
         <div id="playfield" style="position:relative;height:calc(100% - 110px);">
-          <!-- fish spawn here -->
           <div id="cat" class="cat" aria-hidden="true">🐱</div>
           <div id="cat-shadow" class="cat-shadow"></div>
         </div>
-
-        <!-- overlays -->
         <div id="overlay-start" class="overlay">
           <div class="menu">
             <h2>準備はいい？</h2>
-            <p class="muted">矢印キー / マウス / 指で猫を動かして魚をキャッチ</p>
+            <p class="muted">A / D キーで左右移動、スペースでジャンプ。マウス / タッチでも可。</p>
             <div style="margin-top:12px"><button id="start-btn" class="btn">ゲームスタート</button></div>
           </div>
         </div>
-
         <div id="overlay-gameover" class="overlay" style="display:none">
           <div class="menu">
             <h2 id="go-title">ゲームオーバー</h2>
@@ -81,260 +53,150 @@
             <div style="margin-top:12px"><button id="restart-btn" class="btn">もう一度</button></div>
           </div>
         </div>
-
       </div>
-
       <div id="ground"> 
-        <div class="muted">猫を左右に動かして魚をキャッチし、スコアで難易度が上がります。ライフが0になるとゲームオーバー。</div>
+        <div class="muted">猫を左右に動かして魚をキャッチしよう。スペースでジャンプ。</div>
       </div>
     </div>
-
-    <footer style="margin-top:12px; text-align:right; font-size:13px; color:var(--muted)">作成: ChatGPT — 変更や追加機能もできます！</footer>
+    <footer style="margin-top:12px; text-align:right; font-size:13px; color:var(--muted)">作成: ChatGPT — デバッグ済み</footer>
   </div>
 
   <script>
-  // --- Game settings ---
-  const STATE = {
-    score:0,
-    lives:3,
-    running:false,
-    fishList:[],
-    lastSpawn:0,
-    spawnInterval:1200, // ms
-    baseFallSpeed: 80, // px/s
-    speedMultiplier:1,
-    maxLives:3
-  };
-
-  // DOM
-  const playfield = document.getElementById('playfield');
-  const catEl = document.getElementById('cat');
-  const shadowEl = document.getElementById('cat-shadow');
-  const scoreEl = document.getElementById('score');
-  const heartsEl = document.getElementById('hearts');
-  const overlayStart = document.getElementById('overlay-start');
-  const overlayGameover = document.getElementById('overlay-gameover');
-  const startBtn = document.getElementById('start-btn');
-  const restartBtn = document.getElementById('restart-btn');
-  const finalScoreEl = document.getElementById('final-score');
-
-  // Player (cat) state with smoothing
-  const player = {
-    xCurrent: playfield.clientWidth/2, // actual drawn position
-    xTarget: playfield.clientWidth/2,  // what input sets
-    width: 100,
-    maxSpeed: 1000 // px/s - how fast the cat can move when following target
-  };
-
-  // Utils
-  function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-
-  // Setup hearts
-  function renderHearts(){
-    heartsEl.innerHTML = '';
-    for(let i=0;i<STATE.maxLives;i++){
-      const span = document.createElement('span');
-      span.className = 'heart';
-      span.textContent = i < STATE.lives ? '❤️' : '🤍';
-      heartsEl.appendChild(span);
-    }
-  }
-
-  // Resize handler to keep cat within bounds
-  function onResize(){
-    if(!playfield) return;
-    const w = playfield.clientWidth;
-    player.xCurrent = clamp(player.xCurrent, 20, w-20);
-    player.xTarget = clamp(player.xTarget, 20, w-20);
-    updateCatPosition();
-  }
-  window.addEventListener('resize', onResize);
-
-  // Smooth position updater (called from game loop)
-  function updateCatPosition(){
-    // we set left based on current interpolated X
-    const w = playfield.clientWidth;
-    const x = clamp(player.xCurrent, 20, w-20);
-    catEl.style.left = x + 'px';
-    shadowEl.style.left = x + 'px';
-  }
-
-  // Input handlers now only set xTarget (no immediate teleport)
-  playfield.addEventListener('mousemove', e => {
-    const rect = playfield.getBoundingClientRect();
-    player.xTarget = e.clientX - rect.left;
-  });
-  playfield.addEventListener('touchmove', e =>{
-    const rect = playfield.getBoundingClientRect();
-    player.xTarget = e.touches[0].clientX - rect.left;
-  }, {passive:true});
-
-  // Click still sets target (useful on mobile tap)
-  playfield.addEventListener('click', e=>{
-    const rect = playfield.getBoundingClientRect();
-    player.xTarget = e.clientX - rect.left;
-  });
-
-  window.addEventListener('keydown', e=>{
-    // keyboard nudges the target so movement remains smooth
-    const step = 28;
-    if(e.key === 'ArrowLeft' || e.key === 'a') { player.xTarget -= step; }
-    if(e.key === 'ArrowRight' || e.key === 'd') { player.xTarget += step; }
-    // allow space to start
-    if(e.code === 'Space' && overlayStart.style.display !== 'none') startGame();
-  });
-
-  // Fish factory
-  const fishShapes = ['🐟','🐠','🐡','🦈']; // playful variation
-  function spawnFish(){
-    const f = document.createElement('div');
-    f.className = 'fish';
-    f.textContent = fishShapes[Math.floor(Math.random()* (fishShapes.length-1))];
-    const playW = playfield.clientWidth;
-    const x = Math.random() * (playW - 40) + 20;
-    f.style.left = x + 'px';
-    f.style.top = '-48px';
-    const size = 28 + Math.random()*24;
-    f.style.fontSize = size + 'px';
-    playfield.appendChild(f);
-    const obj = {
-      el: f,
-      x,
-      y: -48,
-      size,
-      speed: STATE.baseFallSpeed * (0.9 + Math.random()*0.4) * STATE.speedMultiplier
+  // Wait for DOM ready to avoid null reads
+  document.addEventListener('DOMContentLoaded', ()=>{
+    // --- Game settings ---
+    const STATE = {
+      score:0, lives:3, running:false, fishList:[], powerups:[], lastSpawn:0,
+      spawnInterval:1200, baseFallSpeed:80, speedMultiplier:1, maxLives:3,
+      combo:0, comboTimer:0, highScore: parseInt(localStorage.getItem('catCatchHigh') || '0', 10)
     };
-    STATE.fishList.push(obj);
-  }
 
-  // Update loop
-  let lastTime = null;
-  function gameLoop(ts){
-    if(!STATE.running) { lastTime = null; return; }
-    if(!lastTime) lastTime = ts;
-    const dt = (ts - lastTime) / 1000; // seconds
-    lastTime = ts;
+    // DOM refs (guaranteed to exist now)
+    const playfield = document.getElementById('playfield');
+    const catEl = document.getElementById('cat');
+    const shadowEl = document.getElementById('cat-shadow');
+    const scoreEl = document.getElementById('score');
+    const heartsEl = document.getElementById('hearts');
+    const overlayStart = document.getElementById('overlay-start');
+    const overlayGameover = document.getElementById('overlay-gameover');
+    const startBtn = document.getElementById('start-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const finalScoreEl = document.getElementById('final-score');
 
-    // Smoothly move cat toward target using a max speed per second
-    const diff = player.xTarget - player.xCurrent;
-    const maxMove = player.maxSpeed * dt;
-    // move by either the full diff (if small) or limited by maxMove
-    if(Math.abs(diff) <= maxMove){
-      player.xCurrent = player.xTarget;
-    } else {
-      player.xCurrent += Math.sign(diff) * maxMove;
+    if(!playfield || !catEl){ console.error('必要な DOM 要素が見つかりません。HTML を確認してください。'); return; }
+
+    // Player state (use vx for smooth continuous A/D hold)
+    const player = {
+      x: playfield.clientWidth / 2, vx:0, targetVx:0, maxSpeed: 700, // px/s
+      y:0, vy:0, jumping:false
+    };
+
+    function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+    function renderHearts(){ heartsEl.innerHTML=''; for(let i=0;i<STATE.maxLives;i++){ const s=document.createElement('span'); s.className='heart'; s.textContent = i < STATE.lives ? '❤️' : '🤍'; heartsEl.appendChild(s); } }
+
+    function updateCatDOM(){
+      const w = playfield.clientWidth;
+      player.x = clamp(player.x, 20, w - 20);
+      catEl.style.left = player.x + 'px';
+      shadowEl.style.left = player.x + 'px';
+      // bottom offset for jump visual
+      catEl.style.bottom = 86 + player.y + 'px';
+      // shadow scales/opacity
+      const shOpacity = Math.max(0.18, 1 - player.y / 220);
+      shadowEl.style.opacity = shOpacity;
+      const shScale = Math.max(0.5, 1 - player.y / 600);
+      shadowEl.style.transform = `translateX(-50%) scaleX(${shScale})`;
     }
-    updateCatPosition();
 
-    // spawn logic
-    STATE.lastSpawn += dt*1000;
-    if(STATE.lastSpawn > STATE.spawnInterval){
-      STATE.lastSpawn = 0;
-      spawnFish();
-    }
+    // Controls: A/D as hold keys; mouse/touch set target x
+    const keys = {left:false, right:false};
+    window.addEventListener('keydown', (e)=>{
+      if(e.key === 'a' || e.key === 'A') keys.left = true;
+      if(e.key === 'd' || e.key === 'D') keys.right = true;
+      if(e.code === 'Space'){
+        if(!STATE.running && overlayStart.style.display !== 'none') startGame(); else tryJump();
+      }
+    });
+    window.addEventListener('keyup', (e)=>{
+      if(e.key === 'a' || e.key === 'A') keys.left = false;
+      if(e.key === 'd' || e.key === 'D') keys.right = false;
+    });
 
-    // update fish
-    for(let i = STATE.fishList.length-1; i>=0; i--){
-      const fish = STATE.fishList[i];
-      fish.y += fish.speed * dt;
-      fish.el.style.top = fish.y + 'px';
+    playfield.addEventListener('mousemove', (e)=>{ const r = playfield.getBoundingClientRect(); player.x = e.clientX - r.left; updateCatDOM(); });
+    playfield.addEventListener('touchmove', (e)=>{ const r = playfield.getBoundingClientRect(); player.x = e.touches[0].clientX - r.left; updateCatDOM(); }, {passive:true});
+    playfield.addEventListener('click', (e)=>{ const r = playfield.getBoundingClientRect(); player.x = e.clientX - r.left; updateCatDOM(); });
 
-      // collision with cat (bounding box simple)
-      const catRect = catEl.getBoundingClientRect();
-      const fishRect = fish.el.getBoundingClientRect();
-      if(rectIntersect(catRect, fishRect)){
-        // caught
-        playfield.removeChild(fish.el);
-        STATE.fishList.splice(i,1);
-        addScore(10);
-        continue;
+    function tryJump(){ if(!player.jumping){ player.jumping = true; player.vy = 620; } }
+
+    function rectIntersect(a,b){ return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom); }
+
+    function addScore(n){ STATE.score += n; scoreEl.textContent = STATE.score; if(STATE.score > STATE.highScore){ STATE.highScore = STATE.score; localStorage.setItem('catCatchHigh', STATE.highScore); } }
+
+    function loseLife(){ STATE.lives -= 1; renderHearts(); catEl.animate([{transform:'translateY(0)'},{transform:'translateY(-8px)'},{transform:'translateY(0)'}],{duration:300}); if(STATE.lives <= 0) endGame(); }
+
+    function spawnFish(){ const f=document.createElement('div'); f.className='fish'; f.textContent='🐟'; const playW = playfield.clientWidth; const x = Math.random()*(playW-40)+20; f.style.left = x + 'px'; f.style.top = '-48px'; playfield.appendChild(f); const obj = {el:f, x, y:-48, speed: STATE.baseFallSpeed * (0.9 + Math.random()*0.4) * STATE.speedMultiplier}; STATE.fishList.push(obj); }
+
+    let lastTime = null;
+    function gameLoop(ts){
+      if(!STATE.running) { lastTime = null; return; }
+      if(!lastTime) lastTime = ts;
+      const dt = (ts - lastTime) / 1000; lastTime = ts;
+
+      // Update horizontal velocity from keys with smoothing
+      const desired = (keys.left ? -1 : 0) + (keys.right ? 1 : 0);
+      const targetV = desired * player.maxSpeed;
+      // simple smoothing toward target velocity
+      const accel = 3000; // px/s^2
+      if(player.vx < targetV) player.vx = Math.min(targetV, player.vx + accel * dt);
+      else if(player.vx > targetV) player.vx = Math.max(targetV, player.vx - accel * dt);
+      player.x += player.vx * dt;
+
+      // Jump physics
+      if(player.jumping){ player.y += player.vy * dt; player.vy -= 1500 * dt; if(player.y <= 0){ player.y = 0; player.jumping = false; player.vy = 0; } }
+
+      updateCatDOM();
+
+      // spawn logic
+      STATE.lastSpawn += dt * 1000;
+      if(STATE.lastSpawn > STATE.spawnInterval){ STATE.lastSpawn = 0; spawnFish(); }
+
+      // update fish
+      for(let i = STATE.fishList.length - 1; i >= 0; i--){
+        const fish = STATE.fishList[i];
+        fish.y += fish.speed * dt; fish.el.style.top = fish.y + 'px';
+        const catRect = catEl.getBoundingClientRect(); const fishRect = fish.el.getBoundingClientRect();
+        if(rectIntersect(catRect, fishRect)){
+          fish.el.remove(); STATE.fishList.splice(i,1); addScore(10); continue;
+        }
+        if(fish.y > playfield.clientHeight + 60){ fish.el.remove(); STATE.fishList.splice(i,1); loseLife(); }
       }
 
-      // fell past bottom
-      if(fish.y > playfield.clientHeight + 60){
-        playfield.removeChild(fish.el);
-        STATE.fishList.splice(i,1);
-        loseLife();
-      }
+      requestAnimationFrame(gameLoop);
     }
 
-    // difficulty scaling example: every 50 points, increase speed/spawn rate
-    adjustDifficulty();
-
-    requestAnimationFrame(gameLoop);
-  }
-
-  function rectIntersect(a,b){
-    return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
-  }
-
-  function addScore(n){
-    STATE.score += n;
-    scoreEl.textContent = STATE.score;
-    // small visual feedback
-    scoreEl.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],{duration:250});
-  }
-
-  function loseLife(){
-    STATE.lives -= 1;
-    renderHearts();
-    // shake cat to show loss
-    catEl.animate([{transform:'translateX(-50%) translateY(0)'},{transform:'translateX(-50%) translateY(-8px)'},{transform:'translateX(-50%) translateY(0)'}],{duration:300});
-    if(STATE.lives <= 0){
-      endGame();
+    function startGame(){
+      // reset
+      STATE.score = 0; STATE.lives = STATE.maxLives; STATE.fishList.forEach(f=>f.el.remove()); STATE.fishList = [];
+      STATE.spawnInterval = 1200; STATE.baseFallSpeed = 80; STATE.speedMultiplier = 1; STATE.lastSpawn = 0;
+      scoreEl.textContent = 0; renderHearts(); overlayStart.style.display = 'none'; overlayGameover.style.display = 'none'; STATE.running = true; lastTime = null;
+      player.x = playfield.clientWidth / 2; player.vx = 0; player.y = 0; player.jumping = false; updateCatDOM(); requestAnimationFrame(gameLoop);
     }
-  }
 
-  function adjustDifficulty(){
-    const oldMultiplier = STATE.speedMultiplier;
-    STATE.speedMultiplier = 1 + Math.floor(STATE.score / 50) * 0.18; // +18% per 50 points
-    STATE.spawnInterval = 1200 - Math.floor(STATE.score / 30) * 80; // spawn faster
-    STATE.spawnInterval = Math.max(420, STATE.spawnInterval);
+    function endGame(){ STATE.running = false; finalScoreEl.textContent = STATE.score; overlayGameover.style.display = 'flex'; }
 
-    if(STATE.speedMultiplier !== oldMultiplier){
-      // bump existing fish speeds
-      STATE.fishList.forEach(f => { f.speed *= (STATE.speedMultiplier/oldMultiplier); });
-    }
-  }
+    // wire up buttons
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', startGame);
 
-  function startGame(){
-    // reset
-    STATE.score = 0; STATE.lives = STATE.maxLives; STATE.fishList.forEach(f => f.el.remove()); STATE.fishList = [];
-    STATE.spawnInterval = 1200; STATE.baseFallSpeed = 80; STATE.speedMultiplier = 1; STATE.lastSpawn = 0;
-    scoreEl.textContent = 0; renderHearts();
-    overlayStart.style.display = 'none'; overlayGameover.style.display = 'none';
-    STATE.running = true; lastTime = null;
-    // place cat in center
-    player.xCurrent = playfield.clientWidth/2; player.xTarget = player.xCurrent; updateCatPosition();
-    requestAnimationFrame(gameLoop);
-  }
+    // initial render
+    renderHearts(); updateCatDOM();
 
-  function endGame(){
-    STATE.running = false;
-    finalScoreEl.textContent = STATE.score;
-    overlayGameover.style.display = 'flex';
-    document.getElementById('go-title').textContent = 'ゲームオーバー';
-  }
-
-  startBtn.addEventListener('click', startGame);
-  restartBtn.addEventListener('click', startGame);
-
-  // initial setup
-  function init(){
-    renderHearts();
-    // center cat
-    player.xCurrent = playfield.clientWidth/2; player.xTarget = player.xCurrent; updateCatPosition();
-
-    // accessibility: allow Space to start (handled in keydown)
-
-    // small animation to make the UI feel alive
-    setInterval(()=>{
-      const hearts = document.querySelectorAll('.heart');
-      hearts.forEach((h,i)=> h.animate([{transform:'translateY(0)'},{transform:'translateY(-6px)'},{transform:'translateY(0)'}],{duration:1200,delay:i*120,iterations:1}));
-    },3000);
-  }
-
-  init();
+    // handle resize safely
+    window.addEventListener('resize', ()=>{
+      player.x = clamp(player.x, 20, playfield.clientWidth - 20); updateCatDOM();
+    });
+  });
   </script>
 </body>
 </html>
