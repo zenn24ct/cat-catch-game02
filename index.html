@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>猫キャッチゲーム — デバッグ済み</title>
+  <title>猫キャッチゲーム02</title>
   <style>
     :root{--bg:#f8fafc;--card:#fff;--accent:#ff6b6b;--muted:#6b7280}
     html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Hiragino Kaku Gothic ProN',Meiryo, sans-serif;background:linear-gradient(180deg,#e6f7ff 0,#f8fafc 60%);}
@@ -28,7 +28,7 @@
 </head>
 <body>
   <div class="wrap">
-    <header><h1>猫キャッチゲーム — デバッグ済み</h1></header>
+    <header><h1>猫キャッチゲーム02</h1></header>
     <div id="game-area" class="panel">
       <div id="sky">
         <div class="hud">
@@ -55,23 +55,17 @@
         </div>
       </div>
       <div id="ground"> 
-        <div class="muted">猫を左右に動かして魚をキャッチしよう。スペースでジャンプ。</div>
+        <div class="muted"></div>
       </div>
     </div>
     <footer style="margin-top:12px; text-align:right; font-size:13px; color:var(--muted)">作成: ChatGPT — デバッグ済み</footer>
   </div>
 
   <script>
-  // Wait for DOM ready to avoid null reads
+  // Wait for DOM ready
   document.addEventListener('DOMContentLoaded', ()=>{
-    // --- Game settings ---
-    const STATE = {
-      score:0, lives:3, running:false, fishList:[], powerups:[], lastSpawn:0,
-      spawnInterval:1200, baseFallSpeed:80, speedMultiplier:1, maxLives:3,
-      combo:0, comboTimer:0, highScore: parseInt(localStorage.getItem('catCatchHigh') || '0', 10)
-    };
+    const STATE = { score:0, lives:3, running:false, fishList:[], powerups:[], lastSpawn:0, spawnInterval:1200, baseFallSpeed:80, speedMultiplier:1, maxLives:3 };
 
-    // DOM refs (guaranteed to exist now)
     const playfield = document.getElementById('playfield');
     const catEl = document.getElementById('cat');
     const shadowEl = document.getElementById('cat-shadow');
@@ -83,119 +77,161 @@
     const restartBtn = document.getElementById('restart-btn');
     const finalScoreEl = document.getElementById('final-score');
 
-    if(!playfield || !catEl){ console.error('必要な DOM 要素が見つかりません。HTML を確認してください。'); return; }
+    if(!playfield || !catEl){ console.error('必要な DOM が見つかりません'); return; }
 
-    // Player state (use vx for smooth continuous A/D hold)
-    const player = {
-      x: playfield.clientWidth / 2, vx:0, targetVx:0, maxSpeed: 700, // px/s
-      y:0, vy:0, jumping:false
-    };
+    // --- Audio (WebAudio) ---
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+    function ensureAudio(){ if(!audioCtx) try{ audioCtx = new AudioCtx(); }catch(e){ audioCtx = null; console.warn('AudioContext を作成できません:', e); } }
 
-    function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-
-    function renderHearts(){ heartsEl.innerHTML=''; for(let i=0;i<STATE.maxLives;i++){ const s=document.createElement('span'); s.className='heart'; s.textContent = i < STATE.lives ? '❤️' : '🤍'; heartsEl.appendChild(s); } }
-
-    function updateCatDOM(){
-      const w = playfield.clientWidth;
-      player.x = clamp(player.x, 20, w - 20);
-      catEl.style.left = player.x + 'px';
-      shadowEl.style.left = player.x + 'px';
-      // bottom offset for jump visual
-      catEl.style.bottom = 86 + player.y + 'px';
-      // shadow scales/opacity
-      const shOpacity = Math.max(0.18, 1 - player.y / 220);
-      shadowEl.style.opacity = shOpacity;
-      const shScale = Math.max(0.5, 1 - player.y / 600);
-      shadowEl.style.transform = `translateX(-50%) scaleX(${shScale})`;
+    function sfx(type){
+      ensureAudio(); if(!audioCtx) return; const now = audioCtx.currentTime;
+      if(type === 'catch'){
+        const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+        o.type = 'sine'; o.frequency.setValueAtTime(900, now); o.frequency.exponentialRampToValueAtTime(1300, now + 0.06);
+        g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.08, now+0.01); g.gain.exponentialRampToValueAtTime(0.0001, now+0.16);
+        o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now + 0.18);
+      } else if(type === 'miss'){
+        const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+        o.type = 'triangle'; o.frequency.setValueAtTime(220, now); o.frequency.exponentialRampToValueAtTime(80, now + 0.25);
+        g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.09, now+0.02); g.gain.exponentialRampToValueAtTime(0.0001, now+0.45);
+        o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now + 0.45);
+      } else if(type === 'power'){
+        // quick jingle
+        const o1 = audioCtx.createOscillator(); const o2 = audioCtx.createOscillator(); const g = audioCtx.createGain();
+        o1.type='sine'; o2.type='sine';
+        o1.frequency.setValueAtTime(600, now); o2.frequency.setValueAtTime(920, now);
+        g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.06, now+0.005); g.gain.exponentialRampToValueAtTime(0.0001, now+0.18);
+        o1.connect(g); o2.connect(g); g.connect(audioCtx.destination);
+        o1.start(now); o2.start(now); o1.stop(now+0.16); o2.stop(now+0.16);
+      }
     }
 
-    // Controls: A/D as hold keys; mouse/touch set target x
-    const keys = {left:false, right:false};
-    window.addEventListener('keydown', (e)=>{
-      if(e.key === 'a' || e.key === 'A') keys.left = true;
-      if(e.key === 'd' || e.key === 'D') keys.right = true;
-      if(e.code === 'Space'){
-        if(!STATE.running && overlayStart.style.display !== 'none') startGame(); else tryJump();
-      }
-    });
-    window.addEventListener('keyup', (e)=>{
-      if(e.key === 'a' || e.key === 'A') keys.left = false;
-      if(e.key === 'd' || e.key === 'D') keys.right = false;
+    // --- fish types (editable at runtime) ---
+    let fishTypes = [
+      {emoji:'🐟', score:10, prob:0.55},
+      {emoji:'🐠', score:15, prob:0.25},
+      {emoji:'🐡', score:22, prob:0.1},
+      {emoji:'🦑', score:28, prob:0.06},
+      {emoji:'🌟', score:100, prob:0.04}
+    ];
+
+    // UI panel to add fish types easily
+    const panel = document.createElement('div');
+    panel.style.cssText = 'position:fixed;left:12px;bottom:12px;background:rgba(255,255,255,0.95);border-radius:10px;padding:8px;box-shadow:0 6px 20px rgba(0,0,0,0.08);font-size:13px;z-index:999';
+    panel.innerHTML = `
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="toggle-fpanel" style="padding:6px;border-radius:8px;">魚を追加</button>
+        <div id="f-list" style="max-width:220px;overflow:auto"></div>
+      </div>
+      <div id="f-panel" style="display:none;margin-top:8px">
+        <input id="f-emoji" placeholder="🐟" style="width:40px;font-size:18px"> 
+        <input id="f-score" placeholder="得点" style="width:64px"> 
+        <input id="f-prob" placeholder="出現率(0-1)" style="width:80px"> 
+        <button id="add-fish" style="padding:6px;border-radius:8px;">追加</button>
+      </div>
+    `;
+    document.body.appendChild(panel);
+    const fpanel = panel.querySelector('#f-panel');
+    const toggleBtn = panel.querySelector('#toggle-fpanel');
+    const fList = panel.querySelector('#f-list');
+    const inputEmoji = panel.querySelector('#f-emoji');
+    const inputScore = panel.querySelector('#f-score');
+    const inputProb = panel.querySelector('#f-prob');
+    const addFishBtn = panel.querySelector('#add-fish');
+
+    function renderFishTypes(){ fList.innerHTML = fishTypes.map(f=>`${f.emoji} ${f.score}(${Math.round(f.prob*100)}%)`).join(' | '); }
+    renderFishTypes();
+
+    toggleBtn.addEventListener('click', ()=>{ fpanel.style.display = fpanel.style.display === 'none' ? 'block' : 'none'; });
+    addFishBtn.addEventListener('click', ()=>{
+      const emoji = inputEmoji.value.trim() || '🐟';
+      const score = parseInt(inputScore.value,10) || 10;
+      let prob = parseFloat(inputProb.value);
+      if(isNaN(prob) || prob <= 0) prob = 0.02;
+      fishTypes.push({emoji, score, prob});
+      renderFishTypes(); inputEmoji.value=''; inputScore.value=''; inputProb.value='';
     });
 
-    playfield.addEventListener('mousemove', (e)=>{ const r = playfield.getBoundingClientRect(); player.x = e.clientX - r.left; updateCatDOM(); });
-    playfield.addEventListener('touchmove', (e)=>{ const r = playfield.getBoundingClientRect(); player.x = e.touches[0].clientX - r.left; updateCatDOM(); }, {passive:true});
-    playfield.addEventListener('click', (e)=>{ const r = playfield.getBoundingClientRect(); player.x = e.clientX - r.left; updateCatDOM(); });
+    function chooseFish(){ const r=Math.random(); let cum=0; for(const f of fishTypes){ cum += f.prob; if(r <= cum) return f; } return fishTypes[0]; }
+
+    // particle emoji & style mapping per fish type
+    function particleForType(typeEmoji){
+      // default: water droplets
+      const mapping = {
+  '🦑': { emoji: '🖤', textShadow: '0 0 14px rgba(10,10,10,0.95)' },
+  '🌟': { emoji: '✨', textShadow: '0 0 16px rgba(255,215,0,0.98)' },
+  '🐟': { emoji: '💦', textShadow: '0 0 14px rgba(30,144,255,0.9)' },
+  '🐠': { emoji: '💦', textShadow: '0 0 14px rgba(30,144,255,0.9)' },
+  '🐡': { emoji: '💦', textShadow: '0 0 14px rgba(30,144,255,0.9)' },
+  'default': { emoji: '💦', textShadow: '0 0 14px rgba(30,144,255,0.9)' }
+};
+
+      return mapping[typeEmoji] || mapping['default'];
+    }
+
+    // burst effect (emoji particles) with per-type styling
+    function burst(x,y,emoji,count=12){ const pInfo = particleForType(emoji); for(let i=0;i<count;i++){ const p=document.createElement('div'); p.textContent=pInfo.emoji; p.style.position='absolute'; p.style.left = x + 'px'; p.style.top = y + 'px'; p.style.fontSize = (12 + Math.random()*28) + 'px'; p.style.pointerEvents = 'none'; p.style.zIndex = 800; p.style.textShadow = pInfo.textShadow; playfield.appendChild(p); const vx = (Math.random()*2-1) * (80 + Math.random()*180); const vy = - (80 + Math.random()*300); const rot = (Math.random()*360); const dur = 700 + Math.random()*700; const start = performance.now(); function anim(){ const t = (performance.now() - start)/dur; if(t>1){ p.remove(); return; } p.style.left = x + vx * t + 'px'; p.style.top = y + vy * t + (200 * t * t) + 'px'; p.style.transform = `rotate(${rot * t}deg) scale(${1 - t*0.6})`; p.style.opacity = String(1 - t); requestAnimationFrame(anim); } requestAnimationFrame(anim); } }
+
+    // Player state
+    const player = { x: playfield.clientWidth/2, vx:0, targetVx:0, maxSpeed:700, y:0, vy:0, jumping:false };
+
+    function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+    function updateCatDOM(){ const w = playfield.clientWidth; player.x = clamp(player.x, 20, w-20); catEl.style.left = player.x + 'px'; shadowEl.style.left = player.x + 'px'; catEl.style.bottom = 86 + player.y + 'px'; const shOpacity = Math.max(0.18, 1 - player.y / 220); shadowEl.style.opacity = shOpacity; const shScale = Math.max(0.5, 1 - player.y / 600); shadowEl.style.transform = `translateX(-50%) scaleX(${shScale})`; }
+
+    // controls A/D hold
+    const keys = {left:false, right:false};
+    window.addEventListener('keydown', e=>{ if(e.key === 'a' || e.key === 'A') keys.left = true; if(e.key === 'd' || e.key === 'D') keys.right = true; if(e.code === 'Space'){ if(!STATE.running && overlayStart.style.display !== 'none') startGame(); else tryJump(); } });
+    window.addEventListener('keyup', e=>{ if(e.key === 'a' || e.key === 'A') keys.left = false; if(e.key === 'd' || e.key === 'D') keys.right = false; });
+
+    playfield.addEventListener('mousemove', e=>{ const r = playfield.getBoundingClientRect(); player.x = e.clientX - r.left; updateCatDOM(); });
+    playfield.addEventListener('touchmove', e=>{ const r = playfield.getBoundingClientRect(); player.x = e.touches[0].clientX - r.left; updateCatDOM(); }, {passive:true});
+    playfield.addEventListener('click', e=>{ const r = playfield.getBoundingClientRect(); player.x = e.clientX - r.left; updateCatDOM(); });
 
     function tryJump(){ if(!player.jumping){ player.jumping = true; player.vy = 620; } }
 
     function rectIntersect(a,b){ return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom); }
 
-    function addScore(n){ STATE.score += n; scoreEl.textContent = STATE.score; if(STATE.score > STATE.highScore){ STATE.highScore = STATE.score; localStorage.setItem('catCatchHigh', STATE.highScore); } }
+    function addScore(n){ STATE.score += n; scoreEl.textContent = STATE.score; }
+    function renderHearts(){ heartsEl.innerHTML=''; for(let i=0;i<STATE.maxLives;i++){ const s=document.createElement('span'); s.className='heart'; s.textContent = i < STATE.lives ? '❤️' : '🤍'; heartsEl.appendChild(s); } }
+    function loseLife(){ STATE.lives -= 1; renderHearts(); sfx('miss'); catEl.animate([{transform:'translateY(0)'},{transform:'translateY(-8px)'},{transform:'translateY(0)'}],{duration:300}); if(STATE.lives <= 0) endGame(); }
 
-    function loseLife(){ STATE.lives -= 1; renderHearts(); catEl.animate([{transform:'translateY(0)'},{transform:'translateY(-8px)'},{transform:'translateY(0)'}],{duration:300}); if(STATE.lives <= 0) endGame(); }
-
-    function spawnFish(){ const f=document.createElement('div'); f.className='fish'; f.textContent='🐟'; const playW = playfield.clientWidth; const x = Math.random()*(playW-40)+20; f.style.left = x + 'px'; f.style.top = '-48px'; playfield.appendChild(f); const obj = {el:f, x, y:-48, speed: STATE.baseFallSpeed * (0.9 + Math.random()*0.4) * STATE.speedMultiplier}; STATE.fishList.push(obj); }
+    // spawn
+    function spawnFish(){ const type = chooseFish(); const f = document.createElement('div'); f.className='fish'; f.textContent = type.emoji; const playW = playfield.clientWidth; const x = Math.random()*(playW-40)+20; f.style.left = x + 'px'; f.style.top = '-48px'; const size = 24 + Math.random()*36; f.style.fontSize = size + 'px'; playfield.appendChild(f); const speed = STATE.baseFallSpeed * (0.9 + Math.random()*0.5) * STATE.speedMultiplier; const obj = { el:f, x, y:-48, size, speed, score:type.score, type:type.emoji }; STATE.fishList.push(obj); }
 
     let lastTime = null;
-    function gameLoop(ts){
-      if(!STATE.running) { lastTime = null; return; }
-      if(!lastTime) lastTime = ts;
-      const dt = (ts - lastTime) / 1000; lastTime = ts;
+    function gameLoop(ts){ if(!STATE.running) { lastTime = null; return; } if(!lastTime) lastTime = ts; const dt = (ts - lastTime)/1000; lastTime = ts;
 
-      // Update horizontal velocity from keys with smoothing
-      const desired = (keys.left ? -1 : 0) + (keys.right ? 1 : 0);
-      const targetV = desired * player.maxSpeed;
-      // simple smoothing toward target velocity
-      const accel = 3000; // px/s^2
-      if(player.vx < targetV) player.vx = Math.min(targetV, player.vx + accel * dt);
-      else if(player.vx > targetV) player.vx = Math.max(targetV, player.vx - accel * dt);
-      player.x += player.vx * dt;
+      // horizontal vel smoothing
+      const desired = (keys.left ? -1 : 0) + (keys.right ? 1 : 0); const targetV = desired * player.maxSpeed; const accel = 3000; if(player.vx < targetV) player.vx = Math.min(targetV, player.vx + accel * dt); else if(player.vx > targetV) player.vx = Math.max(targetV, player.vx - accel * dt); player.x += player.vx * dt;
 
-      // Jump physics
+      // jump physics
       if(player.jumping){ player.y += player.vy * dt; player.vy -= 1500 * dt; if(player.y <= 0){ player.y = 0; player.jumping = false; player.vy = 0; } }
 
       updateCatDOM();
 
-      // spawn logic
-      STATE.lastSpawn += dt * 1000;
-      if(STATE.lastSpawn > STATE.spawnInterval){ STATE.lastSpawn = 0; spawnFish(); }
+      STATE.lastSpawn += dt * 1000; if(STATE.lastSpawn > STATE.spawnInterval){ STATE.lastSpawn = 0; spawnFish(); }
 
-      // update fish
-      for(let i = STATE.fishList.length - 1; i >= 0; i--){
-        const fish = STATE.fishList[i];
-        fish.y += fish.speed * dt; fish.el.style.top = fish.y + 'px';
-        const catRect = catEl.getBoundingClientRect(); const fishRect = fish.el.getBoundingClientRect();
-        if(rectIntersect(catRect, fishRect)){
-          fish.el.remove(); STATE.fishList.splice(i,1); addScore(10); continue;
-        }
-        if(fish.y > playfield.clientHeight + 60){ fish.el.remove(); STATE.fishList.splice(i,1); loseLife(); }
-      }
+      for(let i = STATE.fishList.length - 1; i >= 0; i--){ const fish = STATE.fishList[i]; fish.y += fish.speed * dt; fish.el.style.top = fish.y + 'px'; const catRect = catEl.getBoundingClientRect(); const fishRect = fish.el.getBoundingClientRect(); if(rectIntersect(catRect, fishRect)){
+          // caught
+          // choose particle emoji based on fish.type
+          const particleInfo = particleForType(fish.type);
+          burst(fish.x, fish.y, particleInfo.emoji, Math.min(18, Math.max(8, Math.floor(fish.score / 6))));
+          sfx('catch');
+          if(fish.type === '🌟') sfx('power');
+          fish.el.remove(); STATE.fishList.splice(i,1); addScore(fish.score); continue; }
+        if(fish.y > playfield.clientHeight + 60){ fish.el.remove(); STATE.fishList.splice(i,1); loseLife(); } }
 
       requestAnimationFrame(gameLoop);
     }
 
-    function startGame(){
-      // reset
-      STATE.score = 0; STATE.lives = STATE.maxLives; STATE.fishList.forEach(f=>f.el.remove()); STATE.fishList = [];
-      STATE.spawnInterval = 1200; STATE.baseFallSpeed = 80; STATE.speedMultiplier = 1; STATE.lastSpawn = 0;
-      scoreEl.textContent = 0; renderHearts(); overlayStart.style.display = 'none'; overlayGameover.style.display = 'none'; STATE.running = true; lastTime = null;
-      player.x = playfield.clientWidth / 2; player.vx = 0; player.y = 0; player.jumping = false; updateCatDOM(); requestAnimationFrame(gameLoop);
-    }
-
+    function startGame(){ STATE.score = 0; STATE.lives = STATE.maxLives; STATE.fishList.forEach(f=>f.el.remove()); STATE.fishList = []; STATE.spawnInterval = 1200; STATE.baseFallSpeed = 80; STATE.speedMultiplier = 1; STATE.lastSpawn = 0; scoreEl.textContent = 0; renderHearts(); overlayStart.style.display = 'none'; overlayGameover.style.display = 'none'; STATE.running = true; lastTime = null; player.x = playfield.clientWidth/2; player.vx = 0; player.y = 0; player.jumping = false; updateCatDOM(); requestAnimationFrame(gameLoop); }
     function endGame(){ STATE.running = false; finalScoreEl.textContent = STATE.score; overlayGameover.style.display = 'flex'; }
 
-    // wire up buttons
-    startBtn.addEventListener('click', startGame);
-    restartBtn.addEventListener('click', startGame);
+    startBtn.addEventListener('click', startGame); restartBtn.addEventListener('click', startGame);
 
-    // initial render
-    renderHearts(); updateCatDOM();
-
-    // handle resize safely
-    window.addEventListener('resize', ()=>{
-      player.x = clamp(player.x, 20, playfield.clientWidth - 20); updateCatDOM();
-    });
+    // init
+    renderHearts(); updateCatDOM(); window.addEventListener('resize', ()=>{ player.x = clamp(player.x, 20, playfield.clientWidth - 20); updateCatDOM(); });
   });
   </script>
 </body>
